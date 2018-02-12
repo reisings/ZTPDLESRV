@@ -1,0 +1,143 @@
+This will load a CentOS 7 server with Apache, DHCP and TFTP servers along with Ansible, PyEZ, Perl and it has the Data Learning Engine loaded.
+ 
+I’m still trying to figure out how to get the Vagrantfile to push the right one for the project so follow these steps to get it working.
+ 
+On your laptop make sure you have Virtualbox (has to be 5.1 or lower doesn’t look like they have caught up to 5.2 VBox): https://www.virtualbox.org/wiki/Download_Old_Builds_5_1
+ 
+Make sure that you have vagrant loaded: https://www.vagrantup.com/downloads.html
+ 
+Create a folder to house the machine ( I used vagrant_ztp on my mac): mkdir vagrant_ztp; cd vagrant_ztp
+ 
+Vagrant init sreisinger/centos7ztp
+ 
+This will place a Vagrantfile in the directory but we need to replace the contents until I can figure out how to do it on Hashicorp.
+Also you can manipulate the IP Addresses to fit your environment here
+Remove or edit Vagrantfile and replace with the following contents (also attached the file for easy download)
+ 
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+ 
+Vagrant.configure("2") do |config|
+  config.vm.box = "sreisinger/centos7ztp"
+  config.vm.box_version = "0.0.1"
+  config.vm.provider "virtualbox"
+  config.ssh.port = 22
+  config.ssh.username = 'vagrant'
+  config.ssh.host = '192.168.56.20'
+  config.ssh.password = 'Juniper123'
+ 
+  # Management ports
+  config.vm.network 'public_network', ip: "192.168.2.192", nic_type: '82540EM', virtualbox__bridged: "BRIDGED_EXTERNAL"
+  config.vm.network 'private_network', ip: "10.1.1.1", nic_type: 'virtio', virtualbox__intnet: "ZTP_Internal"
+  config.vm.network 'private_network', ip: "192.168.56.20", nic_type: '82540EM', virtualbox__hostonly: "HOST"
+ 
+  #FIX NAT INTERFACE NOT ACTIVATED
+  config.vm.provider 'virtualbox' do |vb|
+    vb.customize ['modifyvm', :id, '--cableconnected1', 'on']
+  end
+  
+end
+ 
+Once you have edited or replaced that file with the above you only have to issue the command: vagrant up
+You will be prompted to tell Virtualbox which of your true laptop/server interfaces to use for the bridged interface
+Within 10 minutes (depending on your internet connection) you should have a fully functional centos7 server ready for ZTP and DLE and Programming.
+Here is the capture of the test session I just ran to stand this up in my lab:
+ 
+Scotts-Mac-mini:Downloads sreisinger$ mkdir vagrant_ztp
+ 
+Scotts-Mac-mini:Downloads sreisinger$ cd vagrant_ztp/
+ 
+ 
+Scotts-Mac-mini:vagrant_ztp sreisinger$ vagrant init sreisinger/centos7ztp
+A `Vagrantfile` has been placed in this directory. You are now
+ready to `vagrant up` your first virtual environment! Please read
+the comments in the Vagrantfile as well as documentation on
+`vagrantup.com` for more information on using Vagrant.
+ 
+Scotts-Mac-mini:vagrant_ztp sreisinger$ ls -al
+total 8
+drwxr-xr-x    3 sreisinger  staff   102 Feb 12 13:52 .
+drwx------+ 250 sreisinger  staff  8500 Feb 12 13:52 ..
+-rw-r--r--    1 sreisinger  staff  3028 Feb 12 13:52 Vagrantfile
+ 
+Scotts-Mac-mini:vagrant_ztp sreisinger$ vi Vagrantfile     ß This is the step you need to vi the Vagrantfile or edit it or replace it – if you do not you will get a single NAT interface
+ 
+Scotts-Mac-mini:vagrant_ztp sreisinger$ vagrant up
+Bringing machine 'default' up with 'virtualbox' provider...
+==> default: You assigned a static IP ending in ".1" to this machine.
+==> default: This is very often used by the router and can cause the
+==> default: network to not work properly. If the network doesn't work
+==> default: properly, try changing this IP.
+==> default: Importing base box 'sreisinger/centos7ztp'...
+==> default: Matching MAC address for NAT networking...
+==> default: You assigned a static IP ending in ".1" to this machine.
+==> default: This is very often used by the router and can cause the
+==> default: network to not work properly. If the network doesn't work
+==> default: properly, try changing this IP.
+==> default: Checking if box 'sreisinger/centos7ztp' is up to date...
+==> default: Setting the name of the VM: vagrant_ztp_default_1518465376419_50036
+==> default: Clearing any previously set network interfaces...
+==> default: Available bridged network interfaces:
+1) en5: Thunderbolt Ethernet
+2) en0: Ethernet
+3) en1: Wi-Fi (AirPort)
+4) en2: Thunderbolt 1
+5) en3: Thunderbolt 2
+6) bridge0
+==> default: When choosing an interface, it is usually the one that is
+==> default: being used to connect to the internet.
+    default: Which interface should the network bridge to? 1
+==> default: Preparing network interfaces based on configuration...
+    default: Adapter 1: nat
+    default: Adapter 2: bridged
+    default: Adapter 3: intnet
+    default: Adapter 4: hostonly
+==> default: Forwarding ports...
+    default: 22 (guest) => 2222 (host) (adapter 1)
+==> default: Running 'pre-boot' VM customizations...
+==> default: Booting VM...
+==> default: Waiting for machine to boot. This may take a few minutes...
+    default: SSH address: 192.168.56.20:22
+    default: SSH username: vagrant
+    default: SSH auth method: password
+    default: Warning: Host appears down. Retrying...
+    default: Warning: Connection refused. Retrying...
+    default: Warning: Connection refused. Retrying...
+    default: Warning: Connection refused. Retrying...
+    default: Warning: Connection refused. Retrying...
+    default: 
+    default: Inserting generated public key within guest...
+    default: Removing insecure key from the guest if it's present...
+    default: Key inserted! Disconnecting and reconnecting using new SSH key...
+==> default: Machine booted and ready!
+==> default: Checking for guest additions in VM...
+    default: No guest additions were detected on the base box for this VM! Guest
+    default: additions are required for forwarded ports, shared folders, host only
+    default: networking, and more. If SSH fails on this machine, please install
+    default: the guest additions and repackage the box to continue.
+    default: 
+    default: This is not an error message; everything may continue to work properly,
+    default: in which case you may ignore this message.
+==> default: Configuring and enabling network interfaces...
+The following SSH command responded with a non-zero exit status.           ß Looking into this as it seems the grep and awk command is not working against the box but it still works
+Vagrant assumes that this means the command failed!
+ 
+/sbin/ip -o -0 addr | grep -v LOOPBACK | awk '{print $2}' | sed 's/://'
+ 
+Stdout from the command:
+ 
+ 
+ 
+Stderr from the command:
+ 
+ 
+Scotts-Mac-mini:vagrant_ztp sreisinger$ ssh vagrant@192.168.56.20         ß You can now ssh as the user vagrant and password Juniper123 to the devices host-only IP 192.168.56.20
+The authenticity of host '192.168.56.20 (192.168.56.20)' can't be established.
+ECDSA key fingerprint is SHA256:6/pz9xaHAIjfnG1JeK8mffw5MitmXjPYRy8wEJvDfYM.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '192.168.56.20' (ECDSA) to the list of known hosts.
+vagrant@192.168.56.20's password: 
+Last login: Mon Feb 12 08:11:09 2018 from 192.168.56.1
+[vagrant@localhost ~]$ 
+ 
+ 
